@@ -30,7 +30,7 @@ public class botaoVender : NetworkBehaviour
             if (targetScript != null)
             {
                 
-                targetScript.VenderItensClientRpc(); // Notifica os clientes
+                targetScript.VenderItensServerRpc(); // Notifica os clientes
             }
         }
     }

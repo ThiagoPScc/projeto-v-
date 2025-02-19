@@ -4,42 +4,51 @@ using System.Collections.Generic;
 
 public class areaDeVenda : NetworkBehaviour
 {
-    private List<Item> itensNaArea = new List<Item>(); // Referenciar a classe Item
+    public List<GameObject> itensNaArea = new List<GameObject>(); // Lista de itens na área de venda
+    public int precoPorItem = 10; // Preço fixo para cada item vendido
 
+    // Função chamada para vender os itens
+    [ServerRpc(RequireOwnership = false)]
+    public void VenderItensServerRpc()
+    {
+        if (!IsServer) return;
+
+        int dinheiroRecebido = 0;
+
+        // Calcula o dinheiro total e destrói os itens
+        foreach (GameObject item in itensNaArea)
+        {
+            if (item != null && item.TryGetComponent(out NetworkObject networkObject))
+            {
+                dinheiroRecebido += precoPorItem;
+                networkObject.Despawn(true); // Remove o item do servidor
+            }
+        }
+
+        itensNaArea.Clear(); // Limpa a lista após vender
+
+        // Adiciona o dinheiro ao sistema global
+        GameManager.Instance.AddMoneyServerRpc(dinheiroRecebido);
+        Debug.Log($"Itens vendidos! Dinheiro recebido: {dinheiroRecebido}");
+    }
+
+    // Adiciona itens à lista quando eles entram na área de venda
     private void OnTriggerEnter(Collider other)
     {
-        Item item = other.GetComponent<Item>(); // Usar a classe Item
-        if (item != null)
+        if (other.CompareTag("Item"))
         {
-            itensNaArea.Add(item);
-            Debug.Log($"Item {item.name} adicionado. Valor: {item.valor}");
+            itensNaArea.Add(other.gameObject);
+            Debug.Log("Item adicionado à área de venda.");
         }
     }
 
+    // Remove itens da lista se eles saem da área de venda
     private void OnTriggerExit(Collider other)
     {
-        Item item = other.GetComponent<Item>(); // Usar a classe Item
-        if (item != null && itensNaArea.Contains(item))
+        if (other.CompareTag("Item"))
         {
-            itensNaArea.Remove(item);
-            Debug.Log($"Item {item.name} removido da área.");
+            itensNaArea.Remove(other.gameObject);
+            Debug.Log("Item removido da área de venda.");
         }
-    }
-
-    [ClientRpc]
-    public void VenderItensClientRpc()
-    {
-        if (!IsOwner) return;
-
-        int valorTotal = 0;
-
-        foreach (Item item in itensNaArea) // Usar a classe Item
-        {
-            valorTotal += item.valor;
-            Destroy(item.gameObject);
-        }
-
-        itensNaArea.Clear();
-        Debug.Log($"Itens vendidos! Valor total: {valorTotal}");
     }
 }
